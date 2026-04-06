@@ -1,0 +1,424 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+
+<!-- ✅ RESPONSIVE -->
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<title>Student Dashboard</title>
+<link rel="icon" href="logo2.png">
+
+<style>
+body {
+  margin: 0;
+  font-family: Arial;
+  background: linear-gradient(135deg, #5f7cff, #7b4bb7);
+  color: white;
+}
+
+/* HEADER */
+header {
+  display: flex;
+  align-items: center;
+  padding: 10px 20px;
+  background: #2c3e50;
+  position: relative;
+}
+
+header img {
+  width: 40px;
+  margin-right: 10px;
+}
+
+/* LOGOUT BUTTON */
+#logoutBtn {
+  position: absolute;
+  top: 10px;
+  right: 20px;
+  background: red;
+  color: white;
+  border: none;
+  padding: 5px 12px;
+  font-size: 12px;
+  border-radius: 5px;
+  cursor: pointer;
+  width: auto !important;
+  display: none;
+}
+
+/* TITLE */
+h1 {
+  text-align: center;
+  margin-top: 20px;
+}
+
+#datetime {
+  text-align: center;
+  font-size: 14px;
+  margin-top: 5px;
+}
+
+/* LAYOUT */
+.container {
+  display: flex;
+  justify-content: center;
+  margin-top: 30px;
+  gap: 30px;
+}
+
+.box {
+  background: white;
+  color: black;
+  padding: 20px;
+  border-radius: 15px;
+  width: 350px;
+}
+
+/* FORM */
+input {
+  width: 100%;
+  padding: 10px;
+  margin: 6px 0;
+  border-radius: 5px;
+  border: 1px solid #ccc;
+}
+
+button {
+  width: 100%;
+  padding: 10px;
+  margin-top: 10px;
+  border: none;
+  background: #5f7cff;
+  color: white;
+  border-radius: 8px;
+  cursor: pointer;
+}
+
+/* TABLE */
+.table-wrapper {
+  overflow-x: auto;
+}
+
+table {
+  width: 100%;
+  margin-top: 10px;
+  border-collapse: collapse;
+  table-layout: fixed; /* IMPORTANT */
+}
+
+th, td {
+  padding: 10px;
+  text-align: center;
+  border-bottom: 1px solid #ccc;
+  word-wrap: break-word;   /* FIX TEXT BREAK */
+  overflow-wrap: break-word;
+}
+
+th {
+  background: #5f7cff;
+  color: white;
+}
+
+/* ✅ COLUMN WIDTH FIX */
+th:nth-child(1), td:nth-child(1) { width: 18%; }
+th:nth-child(2), td:nth-child(2) { width: 25%; }
+th:nth-child(3), td:nth-child(3) { width: 12%; }
+th:nth-child(4), td:nth-child(4) { width: 12%; }
+th:nth-child(5), td:nth-child(5) { width: 18%; }
+th:nth-child(6), td:nth-child(6) { width: 15%; }
+
+/* DATE COLUMN */
+td:nth-child(5) {
+  white-space: nowrap;
+}
+
+/* BUTTON FIX */
+td button {
+  width: auto;
+  padding: 6px 10px;
+  font-size: 12px;
+}
+
+td {
+  max-width: 120px;
+}
+/* 📱 MOBILE ONLY */
+@media (max-width: 768px) {
+
+  .container {
+    flex-direction: column;
+    align-items: center;
+  }
+
+  .box {
+    width: 90%;
+  }
+
+  h1 {
+    font-size: 20px;
+  }
+
+  header h3 {
+    font-size: 16px;
+  }
+
+  input {
+    font-size: 14px;
+    padding: 8px;
+  }
+
+  button {
+    font-size: 14px;
+    padding: 8px;
+  }
+
+  table {
+    min-width: 600px;
+  }
+
+}
+</style>
+</head>
+
+<body>
+
+<header>
+  <img src="logo2.png">
+  <h3>Dashboard</h3>
+  <button id="logoutBtn" onclick="logout()">Logout</button>
+</header>
+
+<h1>STUDENT DASHBOARD</h1>
+<p id="welcome" style="text-align:center;"></p>
+<p id="datetime"></p>
+
+<div class="container">
+
+<!-- LEFT -->
+<div class="box">
+
+  <div id="loginBox">
+    <input id="username" placeholder="Username">
+    <input id="password" type="password" placeholder="Password">
+
+    <button onclick="login()">Login</button>
+    <button onclick="signup()">Signup</button>
+  </div>
+
+  <div id="studentForm" style="display:none;">
+    <h4>Total Students: <span id="count">0</span></h4>
+
+    <input id="name" placeholder="Name">
+    <input id="email" placeholder="Email">
+    <input id="branch" placeholder="Branch">
+    <input id="phone" placeholder="Phone">
+
+    <button onclick="addStudent()">Add Student</button>
+    <button onclick="exportCSV()">Export CSV</button>
+
+    <input id="search" placeholder="Search..." oninput="loadStudents()">
+  </div>
+
+</div>
+
+<!-- RIGHT -->
+<div class="box" style="width:650px;">
+  <h3>Students</h3>
+
+  <div class="table-wrapper">
+    <table>
+      <thead>
+        <tr>
+          <th>Name</th>
+          <th>Email</th>
+          <th>Branch</th>
+          <th>Phone</th>
+          <th>Date</th>
+          <th>Action</th>
+        </tr>
+      </thead>
+      <tbody id="students"></tbody>
+    </table>
+  </div>
+</div>
+
+</div>
+
+<script>
+
+const API = "http://192.168.31.37:5000"; // 🔥 PUT YOUR IP
+
+/* TIME */
+function updateDateTime(){
+  document.getElementById("datetime").innerText =
+    new Date().toLocaleString('en-IN');
+}
+setInterval(updateDateTime,1000);
+updateDateTime();
+
+/* LOGIN */
+function login(){
+
+  const user = document.getElementById("username").value;
+  const pass = document.getElementById("password").value;
+
+  if(!user || !pass){
+    alert("Enter username & password");
+    return;
+  }
+
+  fetch(API+"/login",{
+    method:"POST",
+    headers:{"Content-Type":"application/json"},
+    body:JSON.stringify({
+      username:user,
+      password:pass
+    })
+  })
+  .then(res=>res.json())
+  .then(data=>{
+    if(data.success){
+
+      document.getElementById("loginBox").style.display="none";
+      document.getElementById("studentForm").style.display="block";
+      document.getElementById("logoutBtn").style.display="block";
+
+      document.getElementById("welcome").innerText =
+        "Welcome " + user;
+
+      loadStudents();
+
+    } else {
+      alert("Invalid login");
+    }
+  })
+  .catch(err=>{
+    console.log(err);
+    alert("Server not reachable");
+  });
+}
+/* SIGNUP */
+function signup(){
+  fetch(API+"/signup",{
+    method:"POST",
+    headers:{"Content-Type":"application/json"},
+    body:JSON.stringify({
+      username: document.getElementById("username").value,
+      password: document.getElementById("password").value
+    })
+  })
+  .then(res=>res.json())
+  .then(data=>{
+    alert(data.message || "Signup done");
+  })
+  .catch(err=>{
+    console.log(err);
+    alert("Signup error");
+  });
+}
+/* LOGOUT */
+function logout(){
+  location.reload();
+}
+
+/* ADD */
+function addStudent(){
+
+  const nameVal = document.getElementById("name").value.trim();
+  const emailVal = document.getElementById("email").value.trim();
+  const branchVal = document.getElementById("branch").value.trim();
+  const phoneVal = document.getElementById("phone").value.trim();
+
+  // ✅ VALIDATION
+  if(!nameVal || !emailVal || !branchVal || !phoneVal){
+    alert("Fill all fields");
+    return;
+  }
+
+  fetch(API + "/students", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json"
+    },
+    body: JSON.stringify({
+      name: nameVal,
+      email: emailVal,
+      branch: branchVal,
+      phone: phoneVal
+    })
+  })
+  .then(res => res.json())
+  .then(data => {
+
+    console.log("SERVER RESPONSE:", data);
+
+    if(data.success){
+      alert("Student Added ✅");
+
+      // ✅ CLEAR FORM
+      document.getElementById("name").value = "";
+      document.getElementById("email").value = "";
+      document.getElementById("branch").value = "";
+      document.getElementById("phone").value = "";
+
+      loadStudents();
+
+    } else {
+      alert(data.message || "Failed to add");
+    }
+
+  })
+  .catch(err => {
+    console.log(err);
+    alert("Server not reachable ❌");
+  });
+}
+/* LOAD + SEARCH */
+function loadStudents(){
+  const val=search.value.toLowerCase();
+
+  fetch(API+"/students")
+  .then(res=>res.json())
+  .then(data=>{
+    let html="";
+    data.filter(s=>
+      s.name.toLowerCase().includes(val) ||
+      s.email.toLowerCase().includes(val) ||
+      s.branch.toLowerCase().includes(val) ||
+      s.phone.toLowerCase().includes(val)
+    )
+    .forEach(s=>{
+      html+=`
+      <tr>
+        <td>${s.name}</td>
+        <td>${s.email}</td>
+        <td>${s.branch}</td>
+        <td>${s.phone}</td>
+        <td>${new Date(s.created_at).toLocaleString('en-IN')}</td>
+        <td><button onclick="deleteStudent(${s.id})">Delete</button></td>
+      </tr>`;
+    });
+
+    students.innerHTML=html;
+    count.innerText=data.length;
+  });
+}
+
+/* DELETE */
+function deleteStudent(id){
+  if(confirm("Delete?")){
+    fetch(API+"/students/"+id,{method:"DELETE"})
+    .then(()=>loadStudents());
+  }
+}
+
+/* EXPORT */
+function exportCSV(){
+  window.open(API+"/export");
+}
+
+</script>
+
+</body>
+</html>

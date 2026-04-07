@@ -17,15 +17,24 @@ const pool = new Pool({
 
 /* LOGIN */
 app.post("/login", async (req, res) => {
-  const { username, password } = req.body;
+  let { username, password } = req.body;
+
+  // ✅ trim spaces
+  username = username.trim();
+  password = password.trim();
 
   try {
     const result = await pool.query(
-      "SELECT * FROM users WHERE username=$1 AND password=$2",
+      "SELECT * FROM users WHERE LOWER(username)=LOWER($1) AND password=$2",
       [username, password]
     );
 
-    res.json({ success: result.rows.length > 0 });
+    if (result.rows.length > 0) {
+      res.json({ success: true });
+    } else {
+      res.json({ success: false });
+    }
+
   } catch (err) {
     console.log(err);
     res.json({ success: false });
@@ -34,34 +43,28 @@ app.post("/login", async (req, res) => {
 
 /* SIGNUP */
 app.post("/signup", async (req, res) => {
-  const { username, password } = req.body;
+  let { username, password } = req.body;
+
+  username = username.trim();
+  password = password.trim();
 
   if (!username || !password) {
-    return res.json({ success: false, message: "Fill all fields" });
+    return res.json({ success: false });
   }
 
   try {
-    const check = await pool.query(
-      "SELECT * FROM users WHERE username=$1",
-      [username]
-    );
-
-    if (check.rows.length > 0) {
-      return res.json({ success: false, message: "User exists" });
-    }
-
     await pool.query(
       "INSERT INTO users(username,password) VALUES($1,$2)",
       [username, password]
     );
 
     res.json({ success: true });
+
   } catch (err) {
     console.log(err);
     res.json({ success: false });
   }
 });
-
 /* ================= STUDENTS ================= */
 
 /* ADD STUDENT */

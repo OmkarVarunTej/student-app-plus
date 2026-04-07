@@ -17,17 +17,15 @@ const pool = new Pool({
 
 /* LOGIN */
 app.post("/login", async (req, res) => {
-  let { username, password } = req.body;
-
-  // ✅ trim spaces
-  username = username.trim();
-  password = password.trim();
+  const { username, password } = req.body;
 
   try {
     const result = await pool.query(
-      "SELECT * FROM users WHERE LOWER(username)=LOWER($1) AND password=$2",
+      "SELECT * FROM users WHERE username=$1 AND password=$2",
       [username, password]
     );
+
+    console.log("LOGIN RESULT:", result.rows);
 
     if (result.rows.length > 0) {
       res.json({ success: true });
@@ -36,11 +34,10 @@ app.post("/login", async (req, res) => {
     }
 
   } catch (err) {
-    console.log(err);
+    console.log("LOGIN ERROR:", err);
     res.json({ success: false });
   }
 });
-
 /* SIGNUP */
 app.post("/signup", async (req, res) => {
   let { username, password } = req.body;

@@ -10,9 +10,20 @@ app.use(express.json());
 /* ✅ SUPABASE CONNECTION */
 const pool = new Pool({
   connectionString: process.env.DB_URL,
-  ssl: { rejectUnauthorized: false }
+  ssl: {
+    rejectUnauthorized: false
+  }
 });
 
+app.get("/test", async (req, res) => {
+  try {
+    const result = await pool.query("SELECT * FROM users");
+    res.json(result.rows);
+  } catch (err) {
+    console.log(err);
+    res.send("DB ERROR");
+  }
+});
 /* ================= AUTH ================= */
 
 /* LOGIN */

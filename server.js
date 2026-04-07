@@ -1,5 +1,5 @@
 const express = require("express");
-const mysql = require("mysql2");
+const { Pool } = require("pg");
 const cors = require("cors");
 
 const app = express();
@@ -8,11 +8,11 @@ app.use(cors());
 app.use(express.json());
 
 /* ✅ DB CONNECTION */
-const db = mysql.createConnection({
-  host: "localhost",
-  user: "root",
-  password: "Varun@0014",
-  database: "testdb"
+const pool = new Pool({
+  connectionString: process.env.DB_URL,
+  ssl: {
+    rejectUnauthorized: false
+  }
 });
 
 db.connect(err => {
@@ -26,84 +26,80 @@ db.connect(err => {
 /* ================= AUTH ================= */
 
 /* LOGIN */
-app.post("/login", (req, res) => {
+app.post("/login", async (req, res) => {
   const { username, password } = req.body;
 
-  db.query(
-    "SELECT * FROM users WHERE username=? AND password=?",
-    [username, password],
-    (err, result) => {
-      if (err) return res.json({ success: false });
-
-      res.json({ success: result.length > 0 });
-    }
+  const result = await pool.query(
+    "SELECT * FROM users WHERE username=$1 AND password=$2",
+    [username, password]
   );
+
+  res.json({ success: result.rows.length > 0 });
 });
 
 /* SIGNUP */
-app.post("/signup", (req, res) => {
+app.post("/signup", async (req, res) => {
   const { username, password } = req.body;
 
-  if (!username || !password) {
-    return res.json({ success: false, message: "Fill all fields" });
+  const check = await pool.query(
+    "SELECT * FROM users WHERE username=$1",
+    [username]
+  );
+
+  if (check.rows.length > 0) {
+    return res.json({ success: false, message: "User exists" });
   }
 
-  db.query("SELECT * FROM users WHERE username=?", [username], (err, result) => {
-    if (result.length > 0) {
-      return res.json({ success: false, message: "User exists" });
-    }
+  await pool.query(
+    "INSERT INTO users(username,password) VALUES($1,$2)",
+    [username, password]
+  );
 
-    db.query(
-      "INSERT INTO users(username,password) VALUES(?,?)",
-      [username, password],
-      err => {
-        if (err) return res.json({ success: false });
-
-        res.json({ success: true, message: "Signup successful" });
-      }
-    );
-  });
+  res.json({ success: true });
 });
 
 /* ================= STUDENTS ================= */
 
 /* ADD STUDENT */
-app.post("/students", (req, res) => {
-  const { name, email, branch, phone } = req.body;
+app.post("/students", async (req, res) => {
+  try {
+    const { name, email, branch, phone } = req.body;
 
-  if (!name || !email || !branch || !phone) {
-    return res.json({ success: false, message: "All fields required" });
-  }
-
-  const sql = `
-    INSERT INTO students (name, email, branch, phone)
-    VALUES (?, ?, ?, ?)
-  `;
-
-  db.query(sql, [name, email, branch, phone], (err) => {
-    if (err) {
-      console.log("❌ DB ERROR:", err);
-      return res.json({ success: false, message: "DB error" });
+    // ✅ validation
+    if (!name || !email || !branch || !phone) {
+      return res.json({ success: false, message: "All fields required" });
     }
 
+    // ✅ insert
+    await pool.query(
+      "INSERT INTO students(name, email, branch, phone) VALUES($1, $2, $3, $4)",
+      [name, email, branch, phone]
+    );
+
     res.json({ success: true });
-  });
+
+  } catch (err) {
+    console.log("ADD ERROR:", err);
+    res.json({ success: false, message: "Server error" });
+  }
 });
-
 /* GET STUDENTS */
-app.get("/students", (req, res) => {
-  db.query("SELECT * FROM students ORDER BY id DESC", (err, result) => {
-    if (err) return res.json([]);
+app.get("/students", async (req, res) => {
+  const result = await pool.query(
+    "SELECT * FROM students ORDER BY id DESC"
+  );
 
-    res.json(result);
-  });
+  res.json(result.rows);
 });
 
 /* DELETE */
-app.delete("/students/:id", (req, res) => {
-  db.query("DELETE FROM students WHERE id=?", [req.params.id], () =>
-    res.json({ success: true })
+app.delete("/students/:id", async (req, res) => {
+  await pool.query(
+    "DELETE FROM students WHERE id=$1",
+    [req.params.id]
   );
+
+  res.json({ success: true });
 });
 
 /* EXPORT CSV */

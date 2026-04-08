@@ -36,8 +36,6 @@ app.post("/login", async (req, res) => {
       [username, password]
     );
 
-    console.log("LOGIN RESULT:", result.rows);
-
     if (result.rows.length > 0) {
       res.json({ success: true });
     } else {
@@ -49,27 +47,30 @@ app.post("/login", async (req, res) => {
     res.json({ success: false });
   }
 });
+
 /* SIGNUP */
 app.post("/signup", async (req, res) => {
-  let { username, password } = req.body;
-
-  username = username.trim();
-  password = password.trim();
-
-  if (!username || !password) {
-    return res.json({ success: false });
-  }
+  const { username, password } = req.body;
 
   try {
+    const existing = await pool.query(
+      "SELECT * FROM users WHERE username=$1",
+      [username]
+    );
+
+    if (existing.rows.length > 0) {
+      return res.json({ success: false, message: "User exists" });
+    }
+
     await pool.query(
-      "INSERT INTO users(username,password) VALUES($1,$2)",
+      "INSERT INTO users(username, password) VALUES($1, $2)",
       [username, password]
     );
 
     res.json({ success: true });
 
   } catch (err) {
-    console.log(err);
+    console.log("SIGNUP ERROR:", err);
     res.json({ success: false });
   }
 });

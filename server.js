@@ -14,11 +14,9 @@ const pool = new Pool({
     rejectUnauthorized: false
   }
 });
-
-pool.connect()
-  .then(() => console.log("✅ DB Connected"))
-  .catch(err => console.log("❌ DB Error:", err));
-
+app.get("/health", (req, res) => {
+  res.send("Server OK");
+});
 app.get("/test", async (req, res) => {
   try {
     const result = await pool.query("SELECT * FROM users");

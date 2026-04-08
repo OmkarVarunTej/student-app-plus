@@ -1,6 +1,6 @@
 const express = require("express");
-const { Pool } = require("pg");
 const cors = require("cors");
+const { Pool } = require("pg");
 
 const app = express();
 
@@ -14,6 +14,10 @@ const pool = new Pool({
     rejectUnauthorized: false
   }
 });
+
+pool.connect()
+  .then(() => console.log("✅ DB Connected"))
+  .catch(err => console.log("❌ DB Error:", err));
 
 app.get("/test", async (req, res) => {
   try {
@@ -123,10 +127,14 @@ app.delete("/students/:id", async (req, res) => {
   }
 });
 
+app.get("/", (req, res) => {
+  res.send("API is running 🚀");
+});
+
 /* ================= START ================= */
 
 const PORT = process.env.PORT || 5000;
 
 app.listen(PORT, () => {
-  console.log("🚀 Server running");
+  console.log("Server running on port " + PORT);
 });
